@@ -35,6 +35,11 @@ im_name <- "T58KFA_raw_int_forest_zone_PDL"
 sufix <- ".tif"
 im <- stack(paste0(im_path, "/", im_name, sufix))
 
+
+############################################# 
+############### set spatial mask ############### 
+############################################# 
+
 # #### generate mask from the first layer (using gdal rasterize with original S2 image) ####
 # mask <- raster("/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/mask/image_dehazed_ok.tif")
 # get the NIR band (B8) to make the mask, as it seems to never have zero value on forest.
@@ -281,6 +286,7 @@ Sel_PC <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/b
 Selected_Features <- read.table(Sel_PC)[[1]]
 # change selected PC
 # Selected_Features <- c(1,6)
+
 ####  IF THERE ARE MULTIPLE SHAPEFILES :  location of the directory where shapefiles used for validation are saved ####
 VectorDir <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data"
 # list vector data
@@ -288,8 +294,11 @@ Path_Vector <- list_shp(VectorDir)
 Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
 # location of the spectral species raster needed for validation
 Path_SpectralSpecies <- Kmeans_info$SpectralSpecies
+nbclusters <- nrow(Kmeans_info$Centroids[[1]])
 
+#### #### #### #### #### #### #### #### ######## #### #### #### #### #### #### #### ####
 #### filter field plots that have values in PCA raster ####
+#### #### #### #### #### #### #### #### ######## #### #### #### #### #### #### #### ####
 # get plot spatial data
 library(rgdal)
 plot_data <- readOGR(Path_Vector, Name_Vector)
@@ -302,24 +311,64 @@ test_PCA <- exact_extract(PCA_map, plot_data)
 nb_PCs <- length(Selected_Features)
 keep_plots <- unlist(lapply(test_PCA, function(x) sum(!is.na(x[,1])) )) > nb_PCs
 plot_data_ok <- plot_data[keep_plots,]
-# export in a new file 
-dir.create("/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok")
-# export
+
+#### keep only plots with aproximatly the same size (314m2 to 400m2) ####
+plot_data_ok_same <- plot_data_ok[plot_data_ok$plot %in% c("circle_R10","circle_R11.28","plot_20x20"),]
+
+#### create polygons that perfecly match with raster dimensions #### 
+#### (here 9 cells from plot centroid, but see "adjacent function for other possibilities) ####
+#### need to proceed one by one in case of intersection, in order to keep all plots ####
+xy_plots_centers <- rgeos::gCentroid(plot_data_ok_same,byid=TRUE)
+r <- raster(PCA_Files)
+names(r) <- "value_ok"
+plot_data_ok_rast <- list()
+for (i in 1:length(xy_plots_centers)){
+  print(paste(i, ""))
+  xy_plots_centers_tmp <- xy_plots_centers[i,]
+  cells <- cellFromXY(r, xy_plots_centers_tmp)
+  adj <- adjacent(r, cells, 8, include=TRUE)
+  r[] <- 0
+  r[adj[,2]] <- 1
+  plot_data_ok_rast_tmp <- sf::as_Spatial(sf::st_as_sf(stars::st_as_stars(r), 
+                                                   as_points = FALSE, merge = TRUE))
+  plot_data_ok_rast_tmp <- plot_data_ok_rast_tmp[plot_data_ok_rast_tmp@data$value_ok == 1, ]
+  plot_data_ok_rast[[i]] <- plot_data_ok_rast_tmp
+}
+plot_data_ok_rast <- do.call(rbind,plot_data_ok_rast)
+
+#### merge field data and new plot geometry ####
 library(sf)
-# plot_data_ok <- st_as_sf(plot_data_ok)
-# st_write(plot_data_ok, dsn = '/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok',
-#          layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
+xy_plots_centers <- st_as_sf(xy_plots_centers)
+plot_data_ok_rast <- st_as_sf(plot_data_ok_rast)
+geom_rast <- st_geometry(plot_data_ok_rast)
+plot_data_ok_rast <- as.data.frame(plot_data_ok_same)
+plot_data_ok_rast$geometry <- geom_rast
+plot_data_ok_rast <- st_as_sf(plot_data_ok_rast)
+st_geometry(plot_data_ok_rast) <- plot_data_ok_rast$geometry
+
+plot_data_ok_rast
+#### export in a new file ####
+new_dir_plots <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/RESULTS/T58KFA_raw_int_forest_zone_PDL/plot_data_ok"
+dir.create(new_dir_plots)
+# export
+# 
+st_write(plot_data_ok_rast, dsn = new_dir_plots,
+         layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
 
 #### get the updated shapefile ####
-VectorDir <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok"
+VectorDir < -new_dir_plots
 # list vector data
 Path_Vector <- list_shp(VectorDir)
 Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
+plot_data_ok <- rgdal::readOGR(Path_Vector, Name_Vector)
 
+#### #### #### #### #### #### #### #### ####
 #### Compute diversity indicators ####
+#### #### #### #### #### #### #### #### ####
 # get diversity indicators corresponding to shapefiles (no partitioning of spectral diversity based on field plots so far...)
 Biodiv_Indicators <- diversity_from_plots(Raster_SpectralSpecies = Path_SpectralSpecies, Plots = Path_Vector,
-                                           Raster_Functional = PCA_Files, Selected_Features = Selected_Features)
+                                           Raster_Functional = PCA_Files, Selected_Features = Selected_Features,
+                                           nbclusters = nbclusters)
 
 Shannon_RS <- c(Biodiv_Indicators$Shannon)[[1]]
 FRic <- c(Biodiv_Indicators$FunctionalDiversity$FRic)
@@ -327,14 +376,17 @@ FEve <- c(Biodiv_Indicators$FunctionalDiversity$FEve)
 FDiv <- c(Biodiv_Indicators$FunctionalDiversity$FDiv)
 # if no name for plots
 Biodiv_Indicators$Name_Plot = seq(1,length(Biodiv_Indicators$Shannon[[1]]),by = 1)
+# add names from locality
+Biodiv_Indicators$localty = plot_data_ok@data$localty
 
 #### The diversity indices corresponding to the plots can then be written in CSV files. ####
 
-# write a table for Shannon index
-Path_Results <- file.path(Output_Dir,NameRaster,TypePCA,'VALIDATION')
+# save RDS object wih all indices
+Output_Dir = paste0(im_path, "/RESULTS/", im_name)
+Path_Results <- file.path(Output_Dir,'VALIDATION')
 dir.create(Path_Results, showWarnings = FALSE,recursive = TRUE)
-write.table(Shannon_RS, file = file.path(Path_Results,"ShannonIndex.csv"),
-            sep="\t", dec=".", na=" ", row.names = Biodiv_Indicators$Name_Plot, col.names= F,quote=FALSE)
+
+ # saveRDS(Biodiv_Indicators, paste0(Path_Results, "Biodiv_Indicators.rds"))
 
 # write a table for all spectral diversity indices corresponding to alpha diversity
 Results <- data.frame(Name_Vector, Biodiv_Indicators$Richness, Biodiv_Indicators$Fisher,
@@ -344,14 +396,26 @@ Results <- data.frame(Name_Vector, Biodiv_Indicators$Richness, Biodiv_Indicators
                       Biodiv_Indicators$FunctionalDiversity$FDiv)
 
 names(Results)  = c("ID_Plot", "Species_Richness", "Fisher", "Shannon", "Simpson", "FRic", "FEve", "FDiv")
-write.table(Results, file = file.path(Path_Results,"AlphaDiversity.csv"),
-            sep="\t", dec=".", na=" ", row.names = F, col.names= T,quote=FALSE)
+  # write.table(Results, file = file.path(Path_Results,"AlphaDiversity.csv"),
+  #            sep="\t", dec=".", na=" ", row.names = F, col.names= T,quote=FALSE)
 
 # write a table for Bray Curtis dissimilarity
 BC_mean <- Biodiv_Indicators$BCdiss
 colnames(BC_mean) <- rownames(BC_mean) <- Biodiv_Indicators$Name_Plot
-write.table(BC_mean, file = file.path(Path_Results,"BrayCurtis.csv"),
-            sep="\t", dec=".", na=" ", row.names = F, col.names= T,quote=FALSE)
+ # write.table(BC_mean, file = file.path(Path_Results,"BrayCurtis.csv"),
+ #             sep="\t", dec=".", na=" ", row.names = F, col.names= T,quote=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #############################################################################################################################################################

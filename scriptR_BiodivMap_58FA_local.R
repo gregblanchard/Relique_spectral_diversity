@@ -7,7 +7,7 @@
 ####### Packages ####### 
 library("raster")
 library("devtools")
-#devtools::install_github('jbferet/biodivMapR')
+# devtools::install_github('jbferet/biodivMapR')
 library("biodivMapR")
 library("mapview")
 
@@ -22,7 +22,7 @@ system.file(package = "biodivMapR")
 
 # S2 images
 im_path <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/UM"
-im_path <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021"
+im_path <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021"
 
 setwd(im_path)
 list.files()
@@ -34,6 +34,7 @@ im_name <- "T58KFA_raw_int_forest_zone_PDL"
 
 sufix <- ".tif"
 im <- stack(paste0(im_path, "/", im_name, sufix))
+names(im) <- c("B2",     "B3",     "B4",     "B5",     "B6",     "B7",     "B8",    "B8A",    "B11",    "B12")
 
 # #### generate mask from the first layer (using gdal rasterize with original S2 image) ####
 # mask <- raster("/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/mask/image_dehazed_ok.tif")
@@ -74,10 +75,10 @@ if(!file.exists(paste0(im_path, "/", im_name, "_mask.envi"))){
 mask <- raster(paste0(im_path, "/", im_name, "_mask.envi"))
 
 # complete the HDR file from package templates (own function)
-source("/home/greg/projects/reliques/signature_spectrale_fragmentation/R_scripts/write_hdr_modif.R")
-HDRpath <- paste0(im_path, "/", im_name, ".hdr")
-Sensor <- 'SENTINEL_2A'
-comp_ENVI_header_from_template(HDRpath,Sensor)
+# source("/home/greg/projects/reliques/signature_spectrale_fragmentation/R_scripts/write_hdr_modif.R")
+# HDRpath <- paste0(im_path, "/", im_name, ".hdr")
+# Sensor <- 'SENTINEL_2A'
+# comp_ENVI_header_from_template(HDRpath,Sensor)
 
 # select image with hdr file
 sufix <- ".envi"
@@ -90,7 +91,7 @@ sufix <- ".envi"
 
 ###### Computing options ##### 
 # where to store results
-Output_Dir = paste0(im_path,"/RESULTS")
+Output_Dir = paste0(im_path,"/biodivmapr_local/RESULTS")
 
 Input_Image_File <-  paste0(im_path, "/", im_name, sufix)
 file.exists(Input_Image_File)
@@ -101,7 +102,7 @@ file.exists(Input_Mask_Path)
 im <- stack(Input_Image_File)
 mask <- raster(Input_Mask_Path)
 
-Output_Dir = paste0(im_path,"/RESULTS")
+Output_Dir = paste0(im_path,"/biodivmapr_local/RESULTS")
 
 ############## Radiometric filterings before PCA ############## 
 # NDVI_Thresh allows filtering to eliminate non-vegetated pixels. Nothing fancy so you may need to deal with mixed pixels…
@@ -122,7 +123,7 @@ NIR_Thresh <- 1500
 
 parallel::detectCores()
 
-nbCPU         = 12
+nbCPU         = 4
 MaxRAM        = 0.5
 TypePCA = 'SPCA'
 
@@ -150,19 +151,23 @@ PCA_Output    <- perform_PCA(Input_Image_File, Input_Mask_Path, Output_Dir,
 ##########################################
 # path_pca_info <- paste0(im_path, "/RESULTS/PCA_", im_name, "/", im_name,"/SPCA/PCA/PCA_Info.RData")
 
-path_pca_info <- paste0(im_path, "/RESULTS/", im_name,"/SPCA/PCA/PCA_Info.RData")
+path_pca_info <- paste0(im_path, "/biodivmapr_local/RESULTS/", im_name,"/SPCA/PCA/PCA_Info.RData")
 file.exists(path_pca_info)
 load(paste0(path_pca_info))
 
 path_pca_info
 # Path for the PCA raster
 PCA_Files
+# change PCA_Files
+PCA_Files <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/OutputPCA_8_PCs"
 # number of pixels used for each partition used for k-means clustering
 Pix_Per_Partition 
 # number of partitions used for k-means clustering
 nb_partitions 
 # Path for the updated mask
 Input_Mask_File <- MaskPath
+# change PCA_Files
+Input_Mask_File <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/ShadeMask_Update_PCA"
 # parameters of the PCA model
 PCA_model   
 # variance explained
@@ -170,20 +175,20 @@ summary(PCA_model)
 # definition of spectral bands to be excluded from the analysis
 SpectralFilter
 # nuber of spectral species (clusters)
-nbclusters    = 100
+nbclusters    = 20
 
-nbCPU         = 12
+nbCPU         = 4
 MaxRAM        = 0.5
 TypePCA = 'SPCA'
 
 Input_Image_File <-  paste0(im_path, "/", im_name, sufix)
-Output_Dir = paste0(im_path,"/RESULTS")
+Output_Dir = paste0(im_path,"/biodivmapr_local/RESULTS")
 
 print("Select PCA components for diversity estimations")
 # # CHOICE:  open Vim text editor (edit and quit using :q)
 # select_PCA_components(Input_Image_File, Output_Dir, PCA_Files, File_Open = TRUE)
 # OR: create and export table 
-sel_PCs <- data.frame(c(1,6,7,8), check.names = F)
+sel_PCs <- data.frame(c(1,2,6,7,8), check.names = F)
 sel_PCs_path <- paste0(c(unlist(strsplit(PCA_Files, split="/"))[1:(length(unlist(strsplit(PCA_Files, split="/")))-1)],
                          "Selected_Components.txt"), collapse = "/")
 write.table(sel_PCs, file = sel_PCs_path, row.names = F, col.names = F)
@@ -220,9 +225,9 @@ window_size = 5 # 25 spectral species, 50*50m
 ##          (Villeger et al, 2008 https://doi.org/10.1890/07-1206.1)          ##
 ################################################################################
 ## read selected features from dimensionality reduction
-file.exists(paste0(im_path, "/RESULTS/", im_name, "/SPCA/PCA/Selected_Components.txt"))
+file.exists(paste0(im_path, "/biodivmapr_local/RESULTS/", im_name, "/SPCA/PCA/Selected_Components.txt"))
 # Define PCs to be selected. Set to FALSE if you want to use the "Selected_Components.txt" file
-Sel_PC <- paste0(im_path, "/RESULTS/", im_name, "/SPCA/PCA/Selected_Components.txt")
+Sel_PC <- paste0(im_path, "/biodivmapr_local/RESULTS/", im_name, "/SPCA/PCA/Selected_Components.txt")
 
 Selected_Features <- read.table(Sel_PC)[[1]]
 ## path for selected components
@@ -249,7 +254,6 @@ map_functional_div(Original_Image_File = Input_Image_File, Functional_File = PCA
 # spl_pca1 <- sample(pca,1000)
 # spl_pca1[complete.cases(spl_pca1),]
 
-
 print("MAP ALPHA DIVERSITY")
 # Index.Alpha   = c('Shannon','Simpson')
 Index_Alpha <- c('Shannon')
@@ -273,21 +277,38 @@ map_beta_div(Input_Image_File = Input_Image_File, Output_Dir = Output_Dir, TypeP
 
 
 #### load data from biodivmapR pipeline ####
-# infos from PCA and Kmeans
+# infos from PCA and Kmeans imported from server 
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/PCA_Info.RData")
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Kmeans_Info.RData")
-# selected PCs by user
-Sel_PC <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
+#### load data from biodivmapR pipeline ####
+# infos from PCA and Kmeans generated on local 
+load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/PCA_Info.RData")
+load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Kmeans_Info.RData")
+
+
+# selected PCs imported from server 
+Sel_PC <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
+Selected_Features <- read.table(Sel_PC)[[1]]
+# selected PCs from local
+Sel_PC <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
 Selected_Features <- read.table(Sel_PC)[[1]]
 # change selected PC
-# Selected_Features <- c(1,6)
+ # Selected_Features <- c(1,6)
 ####  IF THERE ARE MULTIPLE SHAPEFILES :  location of the directory where shapefiles used for validation are saved ####
-VectorDir <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data"
+VectorDir <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data"
 # list vector data
 Path_Vector <- list_shp(VectorDir)
 Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
 # location of the spectral species raster needed for validation
 Path_SpectralSpecies <- Kmeans_info$SpectralSpecies
+
+#### modify PCA_Files ####
+# imported from server  (server path => local path)
+PCA_Files <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/OutputPCA_8_PCs"
+Path_SpectralSpecies <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/SpectralSpecies/SpectralSpecies"
+# generated on local 
+PCA_Files <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/OutputPCA_8_PCs"
+Path_SpectralSpecies <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/SpectralSpecies/SpectralSpecies"
 
 #### filter field plots that have values in PCA raster ####
 # get plot spatial data
@@ -302,24 +323,45 @@ test_PCA <- exact_extract(PCA_map, plot_data)
 nb_PCs <- length(Selected_Features)
 keep_plots <- unlist(lapply(test_PCA, function(x) sum(!is.na(x[,1])) )) > nb_PCs
 plot_data_ok <- plot_data[keep_plots,]
-# export in a new file 
-dir.create("/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok")
+
+#### keep only plots with aproximatly the same size (314m2 to 400m2) ####
+plot_data_ok_same <- plot_data_ok[plot_data_ok$plot %in% c("circle_R10","circle_R11.28","plot_20x20"),]
+
+#### create polygons that perfecly match with raster dimensions #### 
+#### (here 9 cells from plot centroid, but see "adjacent function for other possibilities) ####
+xy_plots_centers = rgeos::gCentroid(plot_data_ok_same,byid=TRUE)
+r <- raster(PCA_Files)
+cells <- cellFromXY(r, xy_plots_centers)
+adj <- adjacent(r, cells, 8, include=TRUE)
+r[] <- 0
+r[adj[,2]] <- 1
+plot_data_ok_rast <- sf::as_Spatial(sf::st_as_sf(stars::st_as_stars(r), 
+                                         as_points = FALSE, merge = TRUE)) 
+#### export in a new file ####
+dir.create("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok")
 # export
 library(sf)
-# plot_data_ok <- st_as_sf(plot_data_ok)
-# st_write(plot_data_ok, dsn = '/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok',
-#          layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
+plot_data_ok <- st_as_sf(plot_data_ok_rast)
+st_write(plot_data_ok_rast, dsn = '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok',
+          layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
 
 #### get the updated shapefile ####
-VectorDir <- "/home/greg/projects/reliques/signature_spectrale_fragmentation/maps/biodivmapr/58FA_2021/plot_data_ok"
+VectorDir <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok"
 # list vector data
 Path_Vector <- list_shp(VectorDir)
 Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
 
+#### get the test shapefile ####
+# VectorDir <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_test"
+# # list vector data
+# Path_Vector <- list_shp(VectorDir)
+# Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
+
+
 #### Compute diversity indicators ####
 # get diversity indicators corresponding to shapefiles (no partitioning of spectral diversity based on field plots so far...)
 Biodiv_Indicators <- diversity_from_plots(Raster_SpectralSpecies = Path_SpectralSpecies, Plots = Path_Vector,
-                                          Raster_Functional = PCA_Files, Selected_Features = Selected_Features)
+                                          Raster_Functional = PCA_Files, Selected_Features = Selected_Features, nbclusters = nbclusters)
 
 Shannon_RS <- c(Biodiv_Indicators$Shannon)[[1]]
 FRic <- c(Biodiv_Indicators$FunctionalDiversity$FRic)
@@ -330,9 +372,13 @@ Biodiv_Indicators$Name_Plot = seq(1,length(Biodiv_Indicators$Shannon[[1]]),by = 
 
 #### The diversity indices corresponding to the plots can then be written in CSV files. ####
 
-# write a table for Shannon index
-Path_Results <- file.path(Output_Dir,NameRaster,TypePCA,'VALIDATION')
+Path_Results <- file.path(Output_Dir, im_name, TypePCA, 'VALIDATION')
 dir.create(Path_Results, showWarnings = FALSE,recursive = TRUE)
+
+# save RDS object wih all indices
+# saveRDS(Biodiv_Indicators, paste0(Path_Results, "Biodiv_Indicators.rds"))
+
+# write a table for Shannon index
 write.table(Shannon_RS, file = file.path(Path_Results,"ShannonIndex.csv"),
             sep="\t", dec=".", na=" ", row.names = Biodiv_Indicators$Name_Plot, col.names= F,quote=FALSE)
 
@@ -389,7 +435,7 @@ plot(im_envi)
 Input_Image_File=(paste0(im_path, "/biodivMapR_Convert_BIL/", im_name))
 Input_Image_File
 #Input_Mask_File   ="D:/Mes Donnees/Google_Cloud/mask_NC_sud"
-Output_Dir        = paste0(im_path, "/RESULTS/", im_name)
+Output_Dir        = paste0(im_path, "/biodivmapr_local/RESULTS/", im_name)
 Input_Mask_File   = 
   #
   #red=raster('J:/Sentinel2/Gilles/biodivMapR_Convert_BIL/Saotome_S2', band=3)
