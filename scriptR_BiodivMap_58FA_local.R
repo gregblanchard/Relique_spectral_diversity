@@ -217,7 +217,7 @@ map_spectral_species(Input_Image_File = Input_Image_File, Output_Dir = Output_Di
 ####################################################################################
 
 #### set a window size in pixel unit ####
-window_size = 5 # 25 spectral species, 50*50m 
+window_size = 3 # 9 spectral species, 50*50m 
 # window_size = 10 # 100 spectral species, 100*100m
 
 ################################################################################
@@ -277,17 +277,17 @@ map_beta_div(Input_Image_File = Input_Image_File, Output_Dir = Output_Dir, TypeP
 
 
 #### load data from biodivmapR pipeline ####
-# infos from PCA and Kmeans imported from server 
+# infos from PCA and Kmeans imported from server: 100 spectral sp from PC 1,6,7,8
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/PCA_Info.RData")
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Kmeans_Info.RData")
 #### load data from biodivmapR pipeline ####
-# infos from PCA and Kmeans generated on local 
+# infos from PCA and Kmeans generated on local: 20 spectral sp from PC 1,2,6,7,8 
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/PCA_Info.RData")
 load("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Kmeans_Info.RData")
 
 
 # selected PCs imported from server 
-Sel_PC <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
+Sel_PC <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
 Selected_Features <- read.table(Sel_PC)[[1]]
 # selected PCs from local
 Sel_PC <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/biodivmapr_local/RESULTS/T58KFA_raw_int_forest_zone_PDL/SPCA/PCA/Selected_Components.txt"
@@ -342,14 +342,18 @@ dir.create("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_frag
 # export
 library(sf)
 plot_data_ok <- st_as_sf(plot_data_ok_rast)
-st_write(plot_data_ok_rast, dsn = '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok',
-          layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
+# st_write(plot_data_ok_rast, dsn = '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok',
+#           layer = 'geom_plots_PDL_div_indices_utm_ok', driver = "ESRI Shapefile", append=FALSE)
 
 #### get the updated shapefile ####
 VectorDir <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_ok"
 # list vector data
 Path_Vector <- list_shp(VectorDir)
 Name_Vector <- tools::file_path_sans_ext(basename(Path_Vector))
+plot_data_ok <- readOGR(Path_Vector, Name_Vector)
+# extract values
+library(exactextractr)
+test_PCA <- exact_extract(PCA_map, plot_data_ok)
 
 #### get the test shapefile ####
 # VectorDir <- "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_test"
@@ -369,6 +373,8 @@ FEve <- c(Biodiv_Indicators$FunctionalDiversity$FEve)
 FDiv <- c(Biodiv_Indicators$FunctionalDiversity$FDiv)
 # if no name for plots
 Biodiv_Indicators$Name_Plot = seq(1,length(Biodiv_Indicators$Shannon[[1]]),by = 1)
+# add names from locality
+Biodiv_Indicators$localty = plot_data_ok@data$localty
 
 #### The diversity indices corresponding to the plots can then be written in CSV files. ####
 

@@ -129,11 +129,31 @@ for(i in 1:length(rownames(community_matrix))){
     community_matrix_BA[i,j] <- rel_BA
   }
 }
-
 # round BA to interger
 community_matrix_BA <- round(community_matrix_BA)
 # verif order plots
 cbind(rownames(community_matrix_BA),data_ncpipn_plots_sf_PDL_utm$locality)
+
+#### community matrix with relative crown area ####
+# from the log-linear relationship in Blanchard et al. 2016
+# y = b * x^a  <=> log(y) = log(b) + a * log(x)
+data_ncpipn_taxon_df_PDL$CA <- (0.169 * (data_ncpipn_taxon_df_PDL$dbh^1.354 ) )
+# OR : data_ncpipn_taxon_df_PDL$CA <- exp(log(0.169) + 1.354 * log(data_ncpipn_taxon_df_PDL$dbh) ) # (same)
+community_matrix_CA <- community_matrix
+community_matrix_CA[ ] <- NA
+for(i in 1:length(rownames(community_matrix))){
+  data_loc_tmp <-  data_ncpipn_taxon_df_PDL[data_ncpipn_taxon_df_PDL$locality == rownames(community_matrix)[i],]
+  for(j in 1:length(colnames(community_matrix))){
+    tx_tmp <- data_loc_tmp[data_loc_tmp$nom_taxon == colnames(community_matrix)[j],]
+    # sum individual crown area for each species
+    rel_CA <- sum(tx_tmp$CA, na.rm = T)
+    community_matrix_CA[i,j] <- rel_CA
+  }
+}
+# round CA to interger
+community_matrix_CA <- round(community_matrix_CA)
+# verif order plots
+cbind(rownames(community_matrix_CA),data_ncpipn_plots_sf_PDL_utm$locality)
 
 #### export png ####
 # how many plot per species?
@@ -210,6 +230,20 @@ plot(pcoa_taxo_BA$values/sum(pcoa_taxo_BA$values))
 sum((pcoa_taxo_BA$values/sum(pcoa_taxo_BA$values))[1:3])
 PCoA_PCs_taxo_BA <- pcoa_taxo_BA$vectors[,1:3]
 
+
+#### SAME WITH CA: beta div taxo based on a similar method as in BiodivmapR ####
+# distance matrix
+dist_mat_taxo_CA <- vegdist(community_matrix_CA, method = "bray")
+# verif order plots
+cbind(names(dist_mat_taxo_CA),data_ncpipn_plots_sf_PDL_utm$locality)
+
+# PCoA
+pcoa_taxo_CA <- pco(dist_mat_taxo_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_taxo_CA$values/sum(pcoa_taxo_CA$values))
+sum((pcoa_taxo_CA$values/sum(pcoa_taxo_CA$values))[1:3])
+PCoA_PCs_taxo_CA <- pcoa_taxo_CA$vectors[,1:3]
+
 ###########################################################################
 #### Functional diversity ####
 ###########################################################################
@@ -255,6 +289,10 @@ dim(FT_select)
 # verif order plots
 cbind(rownames(community_matrix_for_traits),data_ncpipn_plots_sf_PDL_utm$locality)
 
+# get trait matrice for only SLA
+FT_select_SLA <- data.frame(SLA = FT_select[ , "SLA"])
+rownames(FT_select_SLA) <- rownames(FT_select)
+
 #### percentage complete trait data for plots at the genus level ####
 # in plots
 hist(rowSums(community_matrix_for_traits) / rowSums(community_matrix))
@@ -265,6 +303,8 @@ sum(community_matrix_for_traits)/sum(community_matrix)
 FT_select_trans <- FT_select
 FT_select_trans$SLA <- log(FT_select$SLA)
 FT_select_trans$LA <- log(FT_select$LA)
+FT_select_SLA_trans <- FT_select_SLA
+FT_select_SLA_trans$SLA <- log(FT_select_SLA$SLA)
 
 #### synthetic traits from PCA on traits ####
 library(ade4)
@@ -274,12 +314,17 @@ fviz_pca_ind(pca_traits)
 fviz_pca_var(pca_traits)
 synthetic_trait <- data.frame(pca_traits$li)
 #### functional diversity indices ####
+#### get functional alpha div indices and get functional beta div based on a similar method as in BiodivmapR ####
 library(FD)
 # get functional diversity
 FD_PDL <- dbFD(FT_select, community_matrix_for_traits, stand.FRic = T, calc.CWM = T)
 names(FD_PDL$CWM) <- paste0("CWM_",names(FD_PDL$CWM))
 FD_PDL_trans <- dbFD(FT_select_trans, community_matrix_for_traits, stand.FRic = T, calc.CWM = T)
 names(FD_PDL_trans$CWM) <- paste0("CWM_trans_",names(FD_PDL_trans$CWM))
+
+# only for SLA
+FD_PDL_SLA <- dbFD(FT_select_SLA, community_matrix_for_traits , calc.FRic = F, calc.CWM = F)
+FD_PDL_trans_SLA <- dbFD(FT_select_SLA_trans, community_matrix_for_traits , calc.FRic = F, calc.CWM = F)
 
 #### get functional beta div based on a similar method as in BiodivmapR ####
 # distance matrix
@@ -309,6 +354,33 @@ plot(pcoa_functio_trans$values/sum(pcoa_functio_trans$values))
 sum((pcoa_functio_trans$values/sum(pcoa_functio_trans$values))[1:3])
 PCoA_PCs_functio_trans <- pcoa_functio_trans$vectors[,1:3]
 
+## same for only SLA ##
+# distance matrix
+library(BAT)
+dist_mat_functio_sla <- beta(community_matrix_for_traits,FT_select_SLA)
+dist_mat_functio_sla <- dist_mat_functio_sla$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_sla <- pco(dist_mat_functio_sla, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_sla$values/sum(pcoa_functio_sla$values))
+sum((pcoa_functio_sla$values/sum(pcoa_functio_sla$values))[1:3])
+PCoA_PCs_functio_SLA <- pcoa_functio_sla$vectors[,1:3]
+
+# distance matrix
+library(BAT)
+dist_mat_functio_trans_sla <- beta(community_matrix_for_traits,FT_select_SLA_trans)
+dist_mat_functio_trans_sla <- dist_mat_functio_trans_sla$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_trans_sla <- pco(dist_mat_functio_trans_sla, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_trans_sla$values/sum(pcoa_functio_trans_sla$values))
+sum((pcoa_functio_trans_sla$values/sum(pcoa_functio_trans_sla$values))[1:3])
+PCoA_PCs_functio_trans_SLA <- pcoa_functio_trans_sla$vectors[,1:3]
+
 #### use basal area to compute functional metrics ####
 community_matrix_for_traits_BA <- 
   community_matrix_BA[,colnames(community_matrix_BA) %in% colnames(community_matrix_for_traits)]
@@ -323,6 +395,10 @@ names(FD_PDL_trans_BA$CWM) <- paste0("CWM_trans_BA_",names(FD_PDL_trans_BA$CWM))
 
 FD_PDL_trans_synthetic_BA  <- dbFD(synthetic_trait, community_matrix_for_traits_BA, stand.FRic = T, calc.CWM = T)
 names(FD_PDL_trans_synthetic_BA$CWM) <- paste0("CWM_trans_synth_BA_",names(FD_PDL_trans_synthetic_BA$CWM))
+
+# only for SLA
+FD_PDL_BA_SLA <- dbFD(FT_select_SLA, community_matrix_for_traits_BA , calc.FRic = F, calc.CWM = F)
+FD_PDL_trans_BA_SLA <- dbFD(FT_select_SLA_trans, community_matrix_for_traits_BA , calc.FRic = F, calc.CWM = F)
 
 ## get functional beta div based on a similar method as in BiodivmapR ##
 # distance matrix
@@ -366,6 +442,126 @@ plot(pcoa_functio_trans_synth_BA$values/sum(pcoa_functio_trans_synth_BA$values))
 sum((pcoa_functio_trans_synth_BA$values/sum(pcoa_functio_trans_synth_BA$values))[1:3])
 PCoA_PCs_functio_trans_synt_BA <- pcoa_functio_trans_synth_BA$vectors[,1:3]
 
+## same for only SLA ##
+# distance matrix
+library(BAT)
+dist_mat_functio_sla_BA <- beta(community_matrix_for_traits_BA,FT_select_SLA)
+dist_mat_functio_sla_BA <- dist_mat_functio_sla_BA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_sla_BA <- pco(dist_mat_functio_sla_BA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_sla_BA$values/sum(pcoa_functio_sla_BA$values))
+sum((pcoa_functio_sla_BA$values/sum(pcoa_functio_sla_BA$values))[1:3])
+PCoA_PCs_functio_SLA_BA <- pcoa_functio_sla_BA$vectors[,1:3]
+
+# distance matrix
+library(BAT)
+dist_mat_functio_trans_sla_BA <- beta(community_matrix_for_traits_BA,FT_select_SLA_trans)
+dist_mat_functio_trans_sla_BA <- dist_mat_functio_trans_sla_BA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_trans_sla_BA <- pco(dist_mat_functio_trans_sla_BA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_trans_sla_BA$values/sum(pcoa_functio_trans_sla_BA$values))
+sum((pcoa_functio_trans_sla_BA$values/sum(pcoa_functio_trans_sla_BA$values))[1:3])
+PCoA_PCs_functio_trans_SLA_BA <- pcoa_functio_trans_sla_BA$vectors[,1:3]
+
+
+#### use crown area to compute functional metrics ####
+community_matrix_for_traits_CA <- 
+  community_matrix_CA[,colnames(community_matrix_CA) %in% colnames(community_matrix_for_traits)]
+## functional diversity indices ##
+library(FD)
+# get functional diversity
+FD_PDL_CA <- dbFD(FT_select, community_matrix_for_traits_CA, stand.FRic = T, calc.CWM = T)
+names(FD_PDL_CA$CWM) <- paste0("CWM_CA_",names(FD_PDL_CA$CWM))
+
+FD_PDL_trans_CA <- dbFD(FT_select_trans, community_matrix_for_traits_CA, stand.FRic = T, calc.CWM = T)
+names(FD_PDL_trans_CA$CWM) <- paste0("CWM_trans_CA_",names(FD_PDL_trans_CA$CWM))
+
+FD_PDL_trans_synthetic_CA  <- dbFD(synthetic_trait, community_matrix_for_traits_CA, stand.FRic = T, calc.CWM = T)
+names(FD_PDL_trans_synthetic_CA$CWM) <- paste0("CWM_trans_synth_CA_",names(FD_PDL_trans_synthetic_CA$CWM))
+
+# only for SLA
+FD_PDL_CA_SLA <- dbFD(FT_select_SLA, community_matrix_for_traits_CA , calc.FRic = F, calc.CWM = F)
+FD_PDL_trans_CA_SLA <- dbFD(FT_select_SLA_trans, community_matrix_for_traits_CA , calc.FRic = F, calc.CWM = F)
+
+## get functional beta div based on a similar method as in BiodivmapR ##
+# distance matrix
+library(BAT)
+dist_mat_functio_CA <- beta(community_matrix_for_traits_CA,FT_select)
+dist_mat_functio_CA <- dist_mat_functio_CA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_CA <- pco(dist_mat_functio_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_CA$values/sum(pcoa_functio_CA$values))
+sum((pcoa_functio_CA$values/sum(pcoa_functio_CA$values))[1:3])
+PCoA_PCs_functio_CA <- pcoa_functio_CA$vectors[,1:3]
+
+## get functional beta div based on a similar method as in BiodivmapR with transformed traits ##
+# distance matrix
+library(BAT)
+dist_mat_functio_trans_CA <- beta(community_matrix_for_traits_CA,FT_select_trans)
+dist_mat_functio_trans_CA <- dist_mat_functio_trans_CA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_trans_CA <- pco(dist_mat_functio_trans_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_trans_CA$values/sum(pcoa_functio_trans_CA$values))
+sum((pcoa_functio_trans_CA$values/sum(pcoa_functio_trans_CA$values))[1:3])
+PCoA_PCs_functio_trans_CA <- pcoa_functio_trans_CA$vectors[,1:3]
+
+## get functional beta div based on a similar method as in BiodivmapR with synthetic traits ##
+# distance matrix
+library(BAT)
+dist_mat_functio_trans_synth_CA <- beta(community_matrix_for_traits_CA,synthetic_trait)
+dist_mat_functio_trans_synth_CA <- dist_mat_functio_trans_synth_CA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_trans_synth_CA <- pco(dist_mat_functio_trans_synth_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_trans_synth_CA$values/sum(pcoa_functio_trans_synth_CA$values))
+sum((pcoa_functio_trans_synth_CA$values/sum(pcoa_functio_trans_synth_CA$values))[1:3])
+PCoA_PCs_functio_trans_synt_CA <- pcoa_functio_trans_synth_CA$vectors[,1:3]
+
+
+## same for only SLA ##
+# distance matrix
+library(BAT)
+dist_mat_functio_sla_CA <- beta(community_matrix_for_traits_CA,FT_select_SLA)
+dist_mat_functio_sla_CA <- dist_mat_functio_sla_CA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_sla_CA <- pco(dist_mat_functio_sla_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_sla_CA$values/sum(pcoa_functio_sla_CA$values))
+sum((pcoa_functio_sla_CA$values/sum(pcoa_functio_sla_CA$values))[1:3])
+PCoA_PCs_functio_SLA_CA <- pcoa_functio_sla_CA$vectors[,1:3]
+
+# distance matrix
+library(BAT)
+dist_mat_functio_trans_sla_CA <- BAT::beta(community_matrix_for_traits_CA,FT_select_SLA_trans)
+dist_mat_functio_trans_sla_CA <- dist_mat_functio_trans_sla_CA$Btotal
+library(ecodist)
+# distance matrix
+# PCoA
+pcoa_functio_trans_sla_CA <- pco(dist_mat_functio_trans_sla_CA, negvals = "zero", dround = 0)
+# keep the first 3 PCs
+plot(pcoa_functio_trans_sla_CA$values/sum(pcoa_functio_trans_sla_CA$values))
+sum((pcoa_functio_trans_sla_CA$values/sum(pcoa_functio_trans_sla_CA$values))[1:3])
+PCoA_PCs_functio_trans_SLA_CA <- pcoa_functio_trans_sla_CA$vectors[,1:3]
+
+
+
+
 ###########################################################################
 #### make groups ####
 ###########################################################################
@@ -393,16 +589,16 @@ localty_grp <- plot_grps
 # verif order plots
 cbind(geom_plots$locality,data_ncpipn_plots_sf_PDL_utm$locality)
 
-# compil
+# export plot geometry (caanot include diversity indices bbeacause theare are to much and colnames do not fit for a shapefile)
 geom_plots_PDL_div_indices <- cbind(geom_plots,
                                     localty_grp
-
       )
 # export
 library(sf)
 st_write(geom_plots_PDL_div_indices, dsn = '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data',
          layer = 'geom_plots_PDL_div_indices_utm', driver = "ESRI Shapefile", append=F)
 
+#### complil indices ####
 plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     localty_grp,
                                     taxo_div,
@@ -415,12 +611,20 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     PCoA_PC2_taxo_BA = PCoA_PCs_taxo_BA[,2],
                                     PCoA_PC3_taxo_BA = PCoA_PCs_taxo_BA[,3],
                                     
+                                    PCoA_PC1_taxo_CA = PCoA_PCs_taxo_CA[,1],
+                                    PCoA_PC2_taxo_CA = PCoA_PCs_taxo_CA[,2],
+                                    PCoA_PC3_taxo_CA = PCoA_PCs_taxo_CA[,3],
+                                    
                                     FRic = FD_PDL$FRic,
                                     FEve = FD_PDL$FEve,
                                     FDiv = FD_PDL$FDiv,
                                     FDis = FD_PDL$FDis,
                                     RaoQ = FD_PDL$RaoQ,
                                     FD_PDL$CWM,
+                               
+                                     FEve_SLA = FD_PDL_SLA$FEve,
+                                     FDis_SLA = FD_PDL_SLA$FDis,
+                                     RaoQ_SLA = FD_PDL_SLA$RaoQ,
                                     
                                     FRic_BA = FD_PDL_BA$FRic,
                                     FEve_BA = FD_PDL_BA$FEve,
@@ -428,6 +632,21 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     FDis_BA = FD_PDL_BA$FDis,
                                     RaoQ_BA = FD_PDL_BA$RaoQ,
                                     FD_PDL_BA$CWM,
+                               
+                                     FEve_BA_SLA = FD_PDL_BA_SLA$FEve,
+                                     FDis_BA_SLA = FD_PDL_BA_SLA$FDis,
+                                     RaoQ_BA_SLA = FD_PDL_BA_SLA$RaoQ,
+                                           
+                                     FRic_CA = FD_PDL_CA$FRic,
+                                     FEve_CA = FD_PDL_CA$FEve,
+                                     FDiv_CA = FD_PDL_CA$FDiv,
+                                     FDis_CA = FD_PDL_CA$FDis,
+                                     RaoQ_CA = FD_PDL_CA$RaoQ,
+                                     FD_PDL_CA$CWM,
+                               
+                                     FEve_CA_SLA = FD_PDL_CA_SLA$FEve,
+                                     FDis_CA_SLA = FD_PDL_CA_SLA$FDis,
+                                     RaoQ_CA_SLA = FD_PDL_CA_SLA$RaoQ,
                                     
                                     FRic_trans = FD_PDL_trans$FRic,
                                     FEve_trans = FD_PDL_trans$FEve,
@@ -435,6 +654,10 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     FDis_trans = FD_PDL_trans$FDis,
                                     RaoQ_trans = FD_PDL_trans$RaoQ,
                                     FD_PDL_trans$CWM,
+                               
+                                     FEve_trans_SLA = FD_PDL_trans_SLA$FEve,
+                                     FDis_trans_SLA = FD_PDL_trans_SLA$FDis,
+                                     RaoQ_trans_SLA = FD_PDL_trans_SLA$RaoQ,
                                     
                                     FRic_trans_BA = FD_PDL_trans_BA$FRic,
                                     FEve_trans_BA = FD_PDL_trans_BA$FEve,
@@ -442,6 +665,21 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     FDis_trans_BA = FD_PDL_trans_BA$FDis,
                                     RaoQ_trans_BA = FD_PDL_trans_BA$RaoQ,
                                     FD_PDL_trans_BA$CWM,
+                               
+                                     FEve_trans_BA_SLA = FD_PDL_trans_BA_SLA$FEve,
+                                     FDis_trans_BA_SLA = FD_PDL_trans_BA_SLA$FDis,
+                                     RaoQ_trans_BA_SLA = FD_PDL_trans_BA_SLA$RaoQ,
+                                     
+                                     FRic_trans_CA = FD_PDL_trans_CA$FRic,
+                                     FEve_trans_CA = FD_PDL_trans_CA$FEve,
+                                     FDiv_trans_CA = FD_PDL_trans_CA$FDiv,
+                                     FDis_trans_CA = FD_PDL_trans_CA$FDis,
+                                     RaoQ_trans_CA = FD_PDL_trans_CA$RaoQ,
+                                     FD_PDL_trans_CA$CWM,
+                               
+                                     FEve_trans_CA_SLA = FD_PDL_trans_CA_SLA$FEve,
+                                     FDis_trans_CA_SLA = FD_PDL_trans_CA_SLA$FDis,
+                                     RaoQ_trans_CA_SLA = FD_PDL_trans_CA_SLA$RaoQ,
                                     
                                     FRic_trans_synth_BA = FD_PDL_trans_synthetic_BA$FRic,
                                     FEve_trans_synth_BA = FD_PDL_trans_synthetic_BA$FEve,
@@ -449,15 +687,38 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     FDis_trans_synth_BA = FD_PDL_trans_synthetic_BA$FDis,
                                     RaoQ_trans_synth_BA = FD_PDL_trans_synthetic_BA$RaoQ,
                                     FD_PDL_trans_synthetic_BA$CWM,
+                               
+                                     FRic_trans_synth_CA = FD_PDL_trans_synthetic_CA$FRic,
+                                     FEve_trans_synth_CA = FD_PDL_trans_synthetic_CA$FEve,
+                                     FDiv_trans_synth_CA = FD_PDL_trans_synthetic_CA$FDiv,
+                                     FDis_trans_synth_CA = FD_PDL_trans_synthetic_CA$FDis,
+                                     RaoQ_trans_synth_CA = FD_PDL_trans_synthetic_CA$RaoQ,
+                                     FD_PDL_trans_synthetic_CA$CWM,
                                     
                                     PCoA_PC1_functio = PCoA_PCs_functio[,1],
                                     PCoA_PC2_functio = PCoA_PCs_functio[,2],
                                     PCoA_PC3_functio = PCoA_PCs_functio[,3],
-                                    
+                               
+                                     PCoA_PC1_functio_SLA = PCoA_PCs_functio_SLA[,1],
+                                     PCoA_PC2_functio_SLA = PCoA_PCs_functio_SLA[,2],
+                                     PCoA_PC3_functio_SLA = PCoA_PCs_functio_SLA[,3],
+                                          
                                     PCoA_PC1_functio_BA = PCoA_PCs_functio_BA[,1],
                                     PCoA_PC2_functio_BA = PCoA_PCs_functio_BA[,2],
                                     PCoA_PC3_functio_BA = PCoA_PCs_functio_BA[,3],
-                                    
+                               
+                                     PCoA_PC1_functio_SLA_BA = PCoA_PCs_functio_SLA_BA[,1],
+                                     PCoA_PC2_functio_SLA_BA = PCoA_PCs_functio_SLA_BA[,2],
+                                     PCoA_PC3_functio_SLA_BA = PCoA_PCs_functio_SLA_BA[,3],
+                                     
+                                     PCoA_PC1_functio_CA = PCoA_PCs_functio_CA[,1],
+                                     PCoA_PC2_functio_CA = PCoA_PCs_functio_CA[,2],
+                                     PCoA_PC3_functio_CA = PCoA_PCs_functio_CA[,3],
+                               
+                                     PCoA_PC1_functio_SLA_CA = PCoA_PCs_functio_SLA_CA[,1],
+                                     PCoA_PC2_functio_SLA_CA = PCoA_PCs_functio_SLA_CA[,2],
+                                     PCoA_PC3_functio_SLA_CA = PCoA_PCs_functio_SLA_CA[,3],
+                                          
                                     PCoA_PC1_functio_trans = PCoA_PCs_functio_trans[,1],
                                     PCoA_PC2_functio_trans = PCoA_PCs_functio_trans[,2],
                                     PCoA_PC3_functio_trans = PCoA_PCs_functio_trans[,3],
@@ -465,10 +726,32 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                     PCoA_PC1_functio_trans_BA = PCoA_PCs_functio_trans_BA[,1],
                                     PCoA_PC2_functio_trans_BA = PCoA_PCs_functio_trans_BA[,2],
                                     PCoA_PC3_functio_trans_BA = PCoA_PCs_functio_trans_BA[,3],
+                               
+                                     PCoA_PC1_functio_trans_SLA = PCoA_PCs_functio_trans_SLA[,1],
+                                     PCoA_PC2_functio_trans_SLA = PCoA_PCs_functio_trans_SLA[,2],
+                                     PCoA_PC3_functio_trans_SLA = PCoA_PCs_functio_trans_SLA[,3],
+                                     
+                                     PCoA_PC1_functio_trans_CA = PCoA_PCs_functio_trans_CA[,1],
+                                     PCoA_PC2_functio_trans_CA = PCoA_PCs_functio_trans_CA[,2],
+                                     PCoA_PC3_functio_trans_CA = PCoA_PCs_functio_trans_CA[,3],
                                     
                                     PCoA_PC1_functio_trans_synt_BA = PCoA_PCs_functio_trans_synt_BA[,1],
                                     PCoA_PC2_functio_trans_synt_BA = PCoA_PCs_functio_trans_synt_BA[,2],
-                                    PCoA_PC3_functio_trans_synt_BA = PCoA_PCs_functio_trans_synt_BA[,3]
+                                    PCoA_PC3_functio_trans_synt_BA = PCoA_PCs_functio_trans_synt_BA[,3],
+                              
+                                      PCoA_PC1_functio_trans_SLA_BA = PCoA_PCs_functio_trans_SLA_BA[,1],
+                                     PCoA_PC2_functio_trans_SLA_BA = PCoA_PCs_functio_trans_SLA_BA[,2],
+                                     PCoA_PC3_functio_trans_SLA_BA = PCoA_PCs_functio_trans_SLA_BA[,3],
+                               
+                                     PCoA_PC1_functio_trans_synt_CA = PCoA_PCs_functio_trans_synt_CA[,1],
+                                     PCoA_PC2_functio_trans_synt_CA = PCoA_PCs_functio_trans_synt_CA[,2],
+                                     PCoA_PC3_functio_trans_synt_CA = PCoA_PCs_functio_trans_synt_CA[,3],
+                               
+                                     PCoA_PC1_functio_trans_SLA_CA = PCoA_PCs_functio_trans_SLA_CA[,1],
+                                     PCoA_PC2_functio_trans_SLA_CA = PCoA_PCs_functio_trans_SLA_CA[,2],
+                                     PCoA_PC3_functio_trans_SLA_CA = PCoA_PCs_functio_trans_SLA_CA[,3]
+                               
+                               
 )
 # export
 saveRDS(plots_PDL_div_indices,'/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plots_PDL_div_indices.rds')
@@ -488,13 +771,26 @@ plot_data_matrices <- list(locality = geom_plots$locality,
                            dist_mat_functio_BA = dist_mat_functio_BA,
                            dist_mat_functio_trans = dist_mat_functio_trans,
                            dist_mat_functio_trans_BA = dist_mat_functio_trans_BA,
+                           dist_mat_functio_trans_CA = dist_mat_functio_trans_CA,
                            dist_mat_functio_trans_synth_BA = dist_mat_functio_trans_synth_BA,
+                           dist_mat_functio_trans_synth_CA = dist_mat_functio_trans_synth_CA,
+                           dist_mat_functio_sla = dist_mat_functio_sla,
+                           dist_mat_functio_trans_sla = dist_mat_functio_trans_sla,
+                           dist_mat_functio_sla_BA = dist_mat_functio_sla_BA,
+                           dist_mat_functio_trans_sla_BA = dist_mat_functio_trans_sla_BA,
+                           dist_mat_functio_sla_CA = dist_mat_functio_sla_CA,
+                           dist_mat_functio_trans_sla_CA = dist_mat_functio_trans_sla_CA,
                            FT_select = FT_select,
                            FT_select_trans = FT_select_trans,
                            community_matrix_for_traits = community_matrix_for_traits,
                            community_matrix_for_traits_BA = community_matrix_for_traits_BA)
 dir.create('/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices')
 saveRDS(plot_data_matrices, '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plot_data_matrices.rds')
+
+
+
+
+
 
 
 
