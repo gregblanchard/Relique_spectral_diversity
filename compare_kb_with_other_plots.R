@@ -298,6 +298,8 @@ rownames(FT_select_SLA) <- rownames(FT_select)
 hist(rowSums(community_matrix_for_traits) / rowSums(community_matrix))
 # total
 sum(community_matrix_for_traits)/sum(community_matrix)
+# species 
+ncol(community_matrix_for_traits)/ncol(community_matrix)
 
 #### transform traits values ####
 FT_select_trans <- FT_select

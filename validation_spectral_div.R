@@ -437,12 +437,103 @@ list_coef_best_30x30plots_25sp_formPC12678 <- list_coef_best
 # plots_field_spectral <- readRDS("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plots_field_spectral_30x30plots_25sp_formPC12678.rds")
 
 
-plot(plots_field_spectral$Ric_S2)
 #### this is the best dataset according to linear modle selection ####
 # plots_field_spectral <- readRDS("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plots_field_spectral_30x30plots_100sp_formPC1678.rds")
 rownames(plots_field_spectral) <- 1:nrow(plots_field_spectral)
 # foret nord 18 is 1/2 out of forest... 
 # plots_field_spectral <- plots_field_spectral[!plots_field_spectral$locality == "Forêt Nord 18",]
+
+
+#### plot linear models ####
+
+plot(plots_field_spectral$Ric_S2~plots_field_spectral$rar20_taxrich)
+plot(plots_field_spectral$FDiv_S2~plots_field_spectral$FDis)
+
+plot(plots_field_spectral$betadiv_PC1_S2~plots_field_spectral$PCoA_PC1_functio)
+plot(plots_field_spectral$betadiv_PC1_S2~plots_field_spectral$PCoA_PC1_taxo)
+
+# nice plot
+#  Ric_S2 ~ sp rich 
+library(ggplot2)
+lm1 <- lm(Ric_S2 ~  sp_richness  , data = plots_field_spectral)
+smry1 = summary(lm1)
+plot1 <- ggplot(data = plots_field_spectral, aes(x = sp_richness , y =   Ric_S2)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=5, y= 9,
+           label= paste0("R²=", round(smry1$r.squared, digits = 2), gtools::stars.pval(smry1$coefficients[8])),
+           color='red') +
+  xlab("sp. richness") + ylab("Spectral richness (α-div)") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  theme_bw()
+
+plot1
+
+# spectral FDiv ~FDis 
+lm1 <- lm( FDiv_S2  ~  FDis , data = plots_field_spectral)
+smry1 = summary(lm1)
+plot2 <- ggplot(data = plots_field_spectral, aes(x = FDis , y =   FDiv_S2)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=.7, y= 150,
+           label= paste0("R²=", round(smry1$r.squared, digits = 2), gtools::stars.pval(smry1$coefficients[8])),
+           color='red') +
+  xlab("FDis (functional α-div)") + ylab("Spectral FDiv (α-div)") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  theme_bw()
+
+plot2
+
+#   betadiv_PC1_S2 ~ PCoA_PC1_taxo 
+lm1 <- lm(betadiv_PC1_S2 ~ PCoA_PC1_taxo, data = plots_field_spectral)
+smry1 = summary(lm1)
+plot3 <- ggplot(data = plots_field_spectral, aes(x = PCoA_PC1_taxo, y = betadiv_PC1_S2)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  geom_smooth(data = plots_field_spectral, aes(x = PCoA_PC1_taxo, y = betadiv_PC1_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x= -.03, y= .4,
+           label= paste0("R²=", round(smry1$r.squared, digits = 2), gtools::stars.pval(smry1$coefficients[8])),
+           color='red') +
+  xlab("PCoA1 (taxonomic β-div)") + ylab("PCoA1 (spectral β-div)") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  theme_bw()
+
+
+plot3
+
+# betadiv_PC1_S2 ~ PCoA_PC1_functio
+lm1 <- lm(  betadiv_PC1_S2 ~ PCoA_PC1_functio, data = plots_field_spectral)
+smry1 = summary(lm1)
+plot4 <- ggplot(data = plots_field_spectral, aes(x = betadiv_PC1_S2, y =  PCoA_PC1_functio )) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  geom_smooth(data = plots_field_spectral, aes(x = betadiv_PC1_S2, y =  PCoA_PC1_functio), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=-.2, y= .04,
+           label= paste0("R²=", round(smry1$r.squared, digits = 2), gtools::stars.pval(smry1$coefficients[8])),
+           color='red') +
+  xlab("PCoA1 (functional β-div)") + ylab("PCoA1 (spectral β-div)") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  theme_bw()
+
+plot4
+# all plots 
+library("gridExtra")
+grid.arrange(plot1,  plot2, plot3, plot4 ,nrow=2) 
+
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/plots_div_vs_spectral_div.png", width=150, height=130, units = 'mm', res = 300) 
+grid.arrange(plot1,  plot2, plot3, plot4 ,nrow=2) 
+dev.off()
 
 #### partial least square regression ####
 library(pls)
@@ -484,12 +575,12 @@ validationplot(model, val.type="R2")
 plot(RMSEP(model), legendpos = "topright")
 
 ### choose the number of components
-plot(model, ncomp = 2, asp = 1, line = TRUE) # SLA
-plot(model, ncomp = 3, asp = 1, line = TRUE) # SLA
-plot(model, ncomp = 4, asp = 1, line = TRUE) # SLA
-plot(model, ncomp = 5, asp = 1, line = TRUE) # SLA
-plot(model, ncomp = 6, asp = 1, line = TRUE) # SLA
-plot(model, ncomp = 7, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 2, asp = 1, line = TRUE) 
+plot(model, ncomp = 3, asp = 1, line = TRUE) 
+plot(model, ncomp = 4, asp = 1, line = TRUE)
+plot(model, ncomp = 5, asp = 1, line = TRUE) 
+plot(model, ncomp = 6, asp = 1, line = TRUE) 
+plot(model, ncomp = 7, asp = 1, line = TRUE) 
 
 #### look for outliers in the model (plot that are not in forest dur to recent landscape changes?) ####
 # negative SLA values in model prediction? 
@@ -554,69 +645,40 @@ colnames(plots_field_spectral)
 # reload package 
 library(pls)
 # taxo div
-model <- plsr(sp_shannon ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
-                S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
-                S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
-              data=plots_field_spectral, scale=TRUE, validation="CV")
 
-model <- plsr(sp_shannon ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
-                S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
-                S2.mean.B8A + S2.mean.B11 + S2.mean.B12 +
-              S2.variance.B2+S2.variance.B3 +            
-              S2.variance.B4+S2.variance.B5+S2.variance.B6  +              
-            S2.variance.B7+S2.variance.B8+S2.variance.B8A +              
-              S2.variance.B11+S2.variance.B12,
-              data=plots_field_spectral, scale=TRUE, validation="CV")
-
-model <- plsr(sp_shannon ~  S2.variance.B2+S2.variance.B3 +            
-                S2.variance.B4+S2.variance.B5+S2.variance.B6  +              
-                S2.variance.B7+S2.variance.B8+S2.variance.B8A +              
-                S2.variance.B11+S2.variance.B12,
-              data=plots_field_spectral, scale=TRUE, validation="CV")
-
-model <- plsr(sp_richness ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
-                S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
-                S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
-              data=plots_field_spectral, scale=TRUE, validation="CV")
-
-model <- plsr(rar20_taxsha ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_rich <- model <- plsr(sp_richness ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
 
 
-model <- plsr(PCoA_PC1_taxo ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_PC1tax <- model <- plsr(PCoA_PC1_taxo ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
 
 # functio div
-model <- plsr(FDis ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_fdis <- model <- plsr(FDis ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
 
-model <- plsr(FDis ~  S2.variance.B2+S2.variance.B3 +            
-                S2.variance.B4+S2.variance.B5+S2.variance.B6  +              
-                S2.variance.B7+S2.variance.B8+S2.variance.B8A +              
-                S2.variance.B11+S2.variance.B12,
-              data=plots_field_spectral, scale=TRUE, validation="CV")
 
-model <- plsr(PCoA_PC1_functio ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_PC1func <- model <- plsr(PCoA_PC1_functio ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
 
 
 # WD
-model <- plsr(CWM_WD ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_wd <- model  <- plsr(CWM_WD ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
 
 
 # SLA
-model <- plsr(CWM_SLA ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
+model_sla <- model <- plsr(CWM_SLA ~ S2.mean.B2 + S2.mean.B3 + S2.mean.B4 +
                 S2.mean.B5 + S2.mean.B6 + S2.mean.B7 + S2.mean.B8 +
                 S2.mean.B8A + S2.mean.B11 + S2.mean.B12,
               data=plots_field_spectral, scale=TRUE, validation="CV")
@@ -627,6 +689,156 @@ validationplot(model, val.type="MSEP")
 validationplot(model, val.type="R2")
 plot(RMSEP(model), legendpos = "topright")
 
+### choose the number of components
+plot(model, ncomp = 2, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 3, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 4, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 5, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 6, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 7, asp = 1, line = TRUE) # SLA
+plot(model, ncomp = 8, asp = 1, line = TRUE) # SLA
+
+#### nice plot cross validation (adjust number of components) ####
+# richness
+library(ggplot2)
+
+ncomp <- 7
+r2 <- R2(model_rich, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( sp_richness =  plots_field_spectral$sp_richness, fitted = model_rich$fitted.values[,,ncomp]))
+plot1 <- ggplot(data = data_plot_tmp, aes(x = sp_richness , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=6, y= 25,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed sp. richness") + ylab("Predicted sp. richness") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot1
+
+# fdis
+ncomp <- 6
+r2 <- R2(model_fdis, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( FDis =  plots_field_spectral$FDis, fitted = model_fdis$fitted.values[,,ncomp]))
+plot2 <- ggplot(data = data_plot_tmp, aes(x = FDis , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=.75, y= 1.7,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed FDis") + ylab("Predicted FDis") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot2
+
+# PC1tax
+ncomp <- 6
+r2 <- R2(model_PC1tax, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( PCoA_PC1_taxo =  plots_field_spectral$PCoA_PC1_taxo, fitted = model_PC1tax$fitted.values[,,ncomp]))
+plot3 <- ggplot(data = data_plot_tmp, aes(x = PCoA_PC1_taxo , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=-.03, y= .03,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed PCoA1 taxo") + ylab("Predicted PCoA1 taxo") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot3
+
+# PC1func
+ncomp <- 6
+r2 <- R2(model_PC1func, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( PCoA_PC1_functio =  plots_field_spectral$PCoA_PC1_functio, fitted = model_PC1func$fitted.values[,,ncomp]))
+plot4 <- ggplot(data = data_plot_tmp, aes(x = PCoA_PC1_functio , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=-.02, y= .03,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed PCoA1 functio") + ylab("Predicted PCoA1 functio") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot4
+
+
+# SLA
+ncomp <- 7
+r2 <- R2(model_sla, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( CWM_SLA =  plots_field_spectral$CWM_SLA, fitted = model_sla$fitted.values[,,ncomp]))
+plot5 <- ggplot(data = data_plot_tmp, aes(x = CWM_SLA , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=4, y= 10,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed CWM SLA") + ylab("Predicted CWM SLA") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot5
+
+# WD
+ncomp <- 5
+r2 <- R2(model_wd, estimate = "all")
+r2 <- r2$val[,,ncomp+1][2]
+data_plot_tmp <- data.frame(cbind( CWM_WD =  plots_field_spectral$CWM_WD, fitted = model_wd$fitted.values[,,ncomp]))
+plot6 <- ggplot(data = data_plot_tmp, aes(x = CWM_WD , y =   fitted)) + 
+  geom_point(color='navy', size = 1, alpha =.3) +
+  # geom_smooth(data = plots_field_spectral, aes(x = rar20_taxrich, y = Ric_S2), formula = y ~ x, method = "lm", color='red', se=T, fill = "red" , alpha = 0.12) +
+  annotate("text", x=.6, y= .83,
+           label= paste0("R²=", round(r2, digits = 2)),
+           color='red') +
+  xlab("Observed CWM WD") + ylab("Predicted CWM WD") +
+  theme(
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12)
+  ) +
+  geom_abline(slope=1, intercept= 0) +
+  theme_bw()
+
+plot6
+
+
+# all plots 
+library("gridExtra")
+grid.arrange(plot1,  plot2, plot3, plot4, plot5, plot6 ,nrow=3) 
+
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/CV_spectral_div.png", width=150, height=200, units = 'mm', res = 300) 
+grid.arrange(plot1,  plot2, plot3, plot4, plot5, plot6 ,nrow=3) 
+dev.off()
+
+#### make predictions #### 
 names(poly_cells_30m_ok_landscape_env_S2)
 landscape_data_utm <- poly_cells_30m_ok_landscape_env_S2[,c("mean.B2","mean.B3","mean.B4",                              
                                                           "mean.B5","mean.B6","mean.B7",                              
@@ -637,34 +849,72 @@ landscape_data <- data.frame(landscape_data_utm)[,c("mean.B2","mean.B3","mean.B4
                                                     "mean.B8","mean.B8A","mean.B11","mean.B12")]
 colnames(landscape_data) <- paste0("S2.", colnames(landscape_data))
 
-pcr_pred <- predict(model, landscape_data, ncomp=6)
+pcr_pred_rich <- predict(model_rich, landscape_data, ncomp=7)
+pcr_pred_fdis <- predict(model_fdis, landscape_data, ncomp=6)
+pcr_pred_PC1tax <- predict(model_PC1tax, landscape_data, ncomp=6)
+pcr_pred_PC1func <- predict(model_PC1func, landscape_data, ncomp=6)
+pcr_pred_sla <- predict(model_sla, landscape_data, ncomp=7)
+pcr_pred_wd <- predict(model_wd, landscape_data, ncomp=5)
 
-dim(pcr_pred)
+dim(pcr_pred_rich)
 
 #### get spatial object from predictions ####
-landscape_pred_utm <- landscape_data_utm
-landscape_pred_utm <- cbind(landscape_pred_utm, pcr_pred)
 library(dplyr)
-landscape_pred_utm  <- landscape_pred_utm %>% select(CWM_SLA.6.comps)
-plot(landscape_pred_utm)
+landscape_pred_utm <- landscape_data_utm
+# rich
+landscape_pred_rich_utm <- cbind(landscape_pred_utm, pcr_pred_rich)
+landscape_pred_rich_utm  <- landscape_pred_rich_utm %>% select(sp_richness.7.comps)
+# fdis
+landscape_pred_fdis_utm <- cbind(landscape_pred_utm, pcr_pred_fdis)
+landscape_pred_fdis_utm  <- landscape_pred_fdis_utm %>% select(FDis.6.comps)
+# PC1tax
+landscape_pred_PC1tax_utm <- cbind(landscape_pred_utm, pcr_pred_PC1tax)
+landscape_pred_PC1tax_utm  <- landscape_pred_PC1tax_utm %>% select(PCoA_PC1_taxo.6.comps)
+# PC1tax
+landscape_pred_PC1func_utm <- cbind(landscape_pred_utm, pcr_pred_PC1func)
+landscape_pred_PC1func_utm  <- landscape_pred_PC1func_utm %>% select(PCoA_PC1_functio.6.comps)
+# SLA
+landscape_pred_sla_utm <- cbind(landscape_pred_utm, pcr_pred_sla)
+landscape_pred_sla_utm  <- landscape_pred_sla_utm %>% select(CWM_SLA.7.comps)
+# WD
+landscape_pred_wd_utm <- cbind(landscape_pred_utm, pcr_pred_wd)
+landscape_pred_wd_utm  <- landscape_pred_wd_utm %>% select(CWM_WD.5.comps)
 
-# st_write(landscape_pred_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_utm.shp")
+# st_write(landscape_pred_rich_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_rich_utm.shp")
+# st_write(landscape_pred_fdis_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_fdis_utm.shp")
+
+# st_write(landscape_pred_PC1tax_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_PC1tax_utm.shp")
+# st_write(landscape_pred_PC1func_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_PC1func_utm.shp")
+
+# st_write(landscape_pred_sla_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_sla_utm.shp")
+# st_write(landscape_pred_wd_utm, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_wd_utm.shp")
+
+
 ####  get saved preditions #### 
-landscape_pred_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_utm.shp")
+landscape_pred_rich_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_rich_utm.shp")
+landscape_pred_fdis_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_fdis_utm.shp")
+landscape_pred_PC1tax_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_PC1tax_utm.shp")
+landscape_pred_PC1func_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_PC1func_utm.shp")
+landscape_pred_sla_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_sla_utm.shp")
+landscape_pred_wd_utm <- st_read("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/landscape_pred_wd_utm.shp")
 
 ######################################################################################################
 #### Analyze predictions (extrapolated biological attributes from S2) ~ fragmentation indices ####
 ######################################################################################################
-preds_CWM_SLA <- landscape_pred_utm$CWM_SLA.6.comps
-preds_CWM_SLA <- landscape_pred_utm$CWM_SLA
-poly_cells_30m_ok_landscape_env_S2$preds_CWM_SLA <- preds_CWM_SLA
-poly_cells_30m_ok_landscape_env_S2_df <- data.frame(poly_cells_30m_ok_landscape_env_S2)
+poly_cells_30m_ok_landscape_env_S2$preds_sp_rich <- landscape_pred_rich_utm$sp_r_7_
+poly_cells_30m_ok_landscape_env_S2$preds_fdis <- landscape_pred_fdis_utm$FDis.6.comps
+poly_cells_30m_ok_landscape_env_S2$preds_PC1_taxo <- landscape_pred_PC1tax_utm$PCoA_PC1_taxo.6.comps
+poly_cells_30m_ok_landscape_env_S2$preds_PC1_func <- landscape_pred_PC1func_utm$PCoA_PC1_functio.6.comps
+poly_cells_30m_ok_landscape_env_S2$preds_CWM_SLA <- landscape_pred_sla_utm$CWM_SLA.7.comps
+poly_cells_30m_ok_landscape_env_S2$preds_CWM_WD <- landscape_pred_wd_utm$CWM_WD.5.comps
+
 #### multivariate model selection  ####
 
 library(MuMIn)
 library(parallel)
 #### select variables ####
 # choose set of explanatory variable
+poly_cells_30m_ok_landscape_env_S2_df <- data.frame(poly_cells_30m_ok_landscape_env_S2)
 colnames(poly_cells_30m_ok_landscape_env_S2_df)
 
 expl_v_list_list <- list(c( "log_dist_edge", "prop.landscape_100_centroid", "prop.landscape_250_centroid", "prop.landscape_500_centroid",
@@ -697,14 +947,14 @@ expl_v_list_list <- list(c( "log_dist_edge", "total.edge_500_centroid",
                             "elevation","slope",                        
                             "curvature", "twi" ))
 
+# keep this
 expl_v_list_list <- list(c( "log_dist_edge", "total.edge_500_centroid", "effective.mesh.size_500_centroid",
                             "elevation","slope",                        
                             "curvature", "twi" ))
 
 
 # set of response variables
-resp_v_list <- c("preds_CWM_SLA")
-
+resp_v_list <- c("preds_sp_rich", "preds_fdis", "preds_PC1_taxo", "preds_PC1_func", "preds_CWM_WD",  "preds_CWM_SLA")
 
 #### remove outliers from SLA prediction (visual chack shows that negative values are on non forest zones) ####
 poly_cells_30m_ok_landscape_env_S2_df <- poly_cells_30m_ok_landscape_env_S2_df[poly_cells_30m_ok_landscape_env_S2_df$preds_CWM_SLA>0,]
@@ -821,24 +1071,33 @@ for(l in 1:length(list_list_first_best_model)){
     if(nrow(sm_tmp$coefficients)>1){
       for(j in 2: nrow(sm_tmp$coefficients)){
         coef_tmp[names(coef_tmp) == rownames(sm_tmp$coefficients)[j]] <- 
-          paste0(round(sm_tmp$coefficients[j,1], digits = 2))
+          paste0(round(sm_tmp$coefficients[j,1], digits = 2), gtools::stars.pval(sm_tmp$coefficients[j,4]))
       }
     }
     # add R2
     R2 <- round(list_model_tab[[i]]$`R^2`[1], digits = 2)
     coef_tmp <- c(coef_tmp, R2 = R2)
-    coef_tmp <- as.numeric(coef_tmp)
     names(coef_tmp) <- c(expl_v_list[[1]],"R2")
     coef_best <- rbind(coef_best, coef_tmp)
     rownames(coef_best)[i] <- names(list_first_best_model)[i]
   }
   # order results
   coef_best <- data.frame(coef_best)
+  list_coef_best <- coef_best
+}
+
+# order results
+list_coef_best <- list()
+for(l in 1:length(list_list_first_best_model)){
   list_coef_best[[l]] <- coef_best[rev(order(coef_best$R2)),]
 }
 
 # explore results 
 list_coef_best
+
+# export results 
+# write.csv2(list_coef_best, "/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/results_models_bio_from_spectral_frag_landscape.csv")
+
 
 # plot(poly_cells_30m_ok_landscape_env_S2_df$preds_CWM_SLA ~ poly_cells_30m_ok_landscape_env_S2_df$log_dist_edge)
 # summary(lm(poly_cells_30m_ok_landscape_env_S2_df$preds_CWM_SLA ~ poly_cells_30m_ok_landscape_env_S2_df$log_dist_edge))
@@ -940,6 +1199,180 @@ Topography <- data.frame(data_for_varpart[,c("elevation","slope",
 
 Edge_influence <- data.frame(data_for_varpart[,c("log_dist_edge", "total.edge_500_centroid", "effective.mesh.size_500_centroid")])
 
+
+#### preds_sp_rich ####
+# relative importance
+relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_sp_rich",
+                                                    "elevation","slope",                        
+                                                    "curvature", "twi",
+                                                    "log_dist_edge", "total.edge_500_centroid",
+                                                    "effective.mesh.size_500_centroid")]))
+# variance partitioning 
+library("rdacca.hp")
+# https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
+pred <- data.frame(pred <- data_for_varpart$preds_sp_rich)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
+
+#### plot varpart ####
+col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
+col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
+# get custom venn diagram function
+source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
+Xnames <- c("Edge\ninfluence", "Topography")
+
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
+
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/vaprpart_pred_rich.png", width=130, height=100, units = 'mm', res = 300) 
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+title("Influence of edge and\ntopography on species richness")
+dev.off()
+
+#### preds_fdis ####
+# relative importance
+relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_fdis",
+                                                    "elevation","slope",                        
+                                                    "curvature", "twi",
+                                                    "log_dist_edge", "total.edge_500_centroid",
+                                                    "effective.mesh.size_500_centroid")]))
+# variance partitioning 
+library("rdacca.hp")
+# https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
+pred <- data.frame(pred <- data_for_varpart$preds_fdis)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
+
+#### plot varpart ####
+col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
+col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
+# get custom venn diagram function
+source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
+Xnames <- c("Edge\ninfluence", "Topography")
+
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
+
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/vaprpart_pred_fdis.png", width=130, height=100, units = 'mm', res = 300) 
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+title("Influence of edge and\ntopography on FDis")
+dev.off()
+
+#### preds_PC1_taxo ####
+# relative importance
+relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_PC1_taxo",
+                                                    "elevation","slope",                        
+                                                    "curvature", "twi",
+                                                    "log_dist_edge", "total.edge_500_centroid",
+                                                    "effective.mesh.size_500_centroid")]))
+# variance partitioning 
+library("rdacca.hp")
+# https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
+pred <- data.frame(pred <- data_for_varpart$preds_PC1_taxo)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
+
+#### plot varpart ####
+col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
+col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
+# get custom venn diagram function
+source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
+Xnames <- c("Edge\ninfluence", "Topography")
+
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
+
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/vaprpart_pred_PC1_taxo.png", width=130, height=100, units = 'mm', res = 300) 
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+title("Influence of edge and\ntopography on PCoA 1 taxo")
+dev.off()
+
+#### preds_PC1_func ####
+# relative importance
+relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_PC1_func",
+                                                    "elevation","slope",                        
+                                                    "curvature", "twi",
+                                                    "log_dist_edge", "total.edge_500_centroid",
+                                                    "effective.mesh.size_500_centroid")]))
+# variance partitioning 
+library("rdacca.hp")
+# https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
+pred <- data.frame(pred <- data_for_varpart$preds_PC1_func)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
+
+#### plot varpart ####
+col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
+col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
+# get custom venn diagram function
+source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
+Xnames <- c("Edge\ninfluence", "Topography")
+
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
+
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/vaprpart_pred_PC1_functio.png", width=130, height=100, units = 'mm', res = 300) 
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+title("Influence of edge and\ntopography on PCoA 1 functio")
+dev.off()
+
+
+#### WD ####
+# relative importance
+relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_CWM_WD",
+                                                    "elevation","slope",                        
+                                                    "curvature", "twi",
+                                                    "log_dist_edge", "total.edge_500_centroid",
+                                                    "effective.mesh.size_500_centroid")]))
+# variance partitioning 
+library("rdacca.hp")
+# https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
+pred <- data.frame(pred <- data_for_varpart$preds_CWM_WD)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
+
+#### plot varpart ####
+col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
+col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
+# get custom venn diagram function
+source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
+Xnames <- c("Edge\ninfluence", "Topography")
+
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
+
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+## export png ##
+# png("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/rapport/vaprpart_pred_wd.png", width=130, height=100, units = 'mm', res = 300) 
+showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
+title("Influence of edge and\ntopography on WD")
+dev.off()
+
+#### SLA ####
+
 # relative importance
 relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_CWM_SLA",
                                                                          "elevation","slope",                        
@@ -949,9 +1382,9 @@ relaimpo::calc.relimp(data.frame(data_for_varpart[c("preds_CWM_SLA",
 # variance partitioning 
 library("rdacca.hp")
 # https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13800
-pred_SLA <- data.frame(pred_SLA <- data_for_varpart$preds_CWM_SLA)
-hierpar_pred_SLA <- rdacca.hp(pred_SLA, list(Edge_influence, Topography), var.part = T)
-hierpar_pred_SLA_all <- rdacca.hp(pred_SLA, cbind(Edge_influence, Topography ), var.part = T)
+pred <- data.frame(pred <- data_for_varpart$preds_CWM_SLA)
+hierpar_pred <- rdacca.hp(pred, list(Edge_influence, Topography), var.part = T)
+hierpar_pred_all <- rdacca.hp(pred, cbind(Edge_influence, Topography ), var.part = T)
 
 #### plot varpart ####
 col_frag <- grDevices::adjustcolor( "forestgreen", alpha.f = 0.2)
@@ -960,11 +1393,11 @@ col_topo <- grDevices::adjustcolor( "orange", alpha.f = 0.2)
 source("/home/thesardfou/Documents/projets/Reliques/projet_kuebini/R/kuebini/showvarparts_custom.R")
 Xnames <- c("Edge\ninfluence", "Topography")
 
-hierpar_pred_SLA$Var.part <- round(hierpar_pred_SLA$Var.part, digits = 2)
-labels <- c(paste0("R²=", hierpar_pred_SLA$Var.part[1,1], "         "),
-            paste0("\nR²=", ifelse(hierpar_pred_SLA$Var.part[3,1]>0, hierpar_pred_SLA$Var.part[3,1], 0)),
-            paste0("          R²=", hierpar_pred_SLA$Var.part[2,1]),
-            1-hierpar_pred_SLA$Var.part[4,1])
+hierpar_pred$Var.part <- round(hierpar_pred$Var.part, digits = 2)
+labels <- c(paste0("R²=", hierpar_pred$Var.part[1,1], "         "),
+            paste0("\nR²=", ifelse(hierpar_pred$Var.part[3,1]>0, hierpar_pred$Var.part[3,1], 0)),
+            paste0("          R²=", hierpar_pred$Var.part[2,1]),
+            1-hierpar_pred$Var.part[4,1])
 
 showvarparts_custom(2, labels = labels, Xnames = Xnames, bg = c(col_frag, col_topo), lty = 0)
 ## export png ##
@@ -1114,6 +1547,7 @@ plot_data_ok_wgs <- spTransform(plot_data_ok, CRS("+proj=longlat +datum=WGS84 +n
 spdf <- SpatialPointsDataFrame(coords = cbind(plot_data_ok$longitd, plot_data_ok$latitud), data = data.frame(plot_data_ok_wgs),
                                proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
 
+
 #### old plot ####
 # bg_image <- levelplot(aerial_photo_ok_r, col.regions=as.character(levels(cols_bg_image)), colorkey=FALSE)
 # forest_layer <- latticeExtra::layer(sp.polygons(forest , lwd=2, fill = "forestgreen", alpha = 0.3)) 
@@ -1139,6 +1573,7 @@ plot_image <- ggplot() + ggRGB(img = aerial_photo,
                                alpha =.7) + 
   xlim(e[1:2]) + ylim(e[3:4])
 plot_image
+
 
 #### with legend  ####
 cols_fill <- c("Forest"="forestgreen")
@@ -1745,6 +2180,7 @@ shannon_pdl_landscape.aggregate <- readRDS("/home/thesardfou/Documents/projets/R
 
 beta_pcoa.aggregate <- readRDS("/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/fragmentation_data/beta_pcoa_30x30.rds")
 
+
 #### get values for each centroid located in forest (use the centroid from the script analyse_frag_betadiv_from_biodivmap_PDL_on_server_new.R) ####
 shannon_centroid <- extract( shannon_pdl_landscape.aggregate, centroids_cells_30m_ok_landscape_env_S2)
 beta_pcoa_centroid1 <- extract( beta_pcoa.aggregate$PCoA.1, centroids_cells_30m_ok_landscape_env_S2)
@@ -1774,8 +2210,7 @@ expl_v_list_list <- list(c( "log_dist_edge", "prop.landscape_100_centroid",
 
 expl_v_list_list <- list(c( "log_dist_edge", "total.edge_500_centroid", "effective.mesh.size_500_centroid",
                             "elevation","slope",                       
-                            "curvature", "twi", ))
-"total.edge_500_centroid", "effective.mesh.size_500_centroid"
+                            "curvature", "twi" ))
 
 # set of response variables
 resp_v_list <- c("mean.PC.1", "mean.PC.6","mean.PC.7" , "mean.PC.8", 
