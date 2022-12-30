@@ -134,10 +134,11 @@ centroids_cells_ok <- readRDS(paste0(dir_to_save,"centroids_cells_50m_PDL_utm.rd
 centroids_cells_ok <- readRDS(paste0(dir_to_save,"centroids_cells_30m_PDL_utm.rds"))
 
 #####################################################################################################
-##### landscape metrics for diferent landscape buffers ##### 
+##### landscape metrics for different landscape buffers ##### 
 #####################################################################################################
-# buffer values 
-buffers = c(100, 250,500,1000)
+# buffer values
+buffers = c(50, 100, 250,500,1000)
+
 # buffers = c(250,500)
 n_pts <- nrow(centroids_cells_ok)
 library(doSNOW)

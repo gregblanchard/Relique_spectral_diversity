@@ -55,6 +55,46 @@ data_ncpipn_taxon_sf_PDL <- data_ncpipn_taxon_sf_PDL %>% filter(isliving == T)
 #### only living trees ####
 data_ncpipn_taxon_sf_PDL <- data_ncpipn_taxon_sf_PDL %>% filter(isliving == T)
 
+#### ALL COUNT FOR THE PAPER: total number of plots, of species, genus, family ####
+
+data_ncpipn_taxon_sf_PDL_tree_count <- data_ncpipn_taxon_sf_PDL[data_ncpipn_taxon_sf_PDL$is_tree == T,]
+dim(data_ncpipn_taxon_sf_PDL_tree_count)
+
+# total number of plot in the landscape (before removing plots)
+
+data_ncpipn_taxon_sf_PDL_tree_count <- data_ncpipn_taxon_sf_PDL_tree_count[data_ncpipn_taxon_sf_PDL_tree_count$plot %in% c("circle_R10" ,"circle_R11.28"  ,"plot_20x20") ,]
+length(unique(data_ncpipn_taxon_sf_PDL_tree_count$locality))
+
+####  removed plots ####
+# these plots are too much outside forest (~open area = 1/3 of the plot) 
+plot_remove <- c("10-10-BIS","Forêt Nord 35","Forêt Nord 18")
+data_ncpipn_taxon_sf_PDL_tree_count <- data_ncpipn_taxon_sf_PDL_tree_count[!data_ncpipn_taxon_sf_PDL_tree_count$locality %in% plot_remove  ,]
+
+# load the final plot list to get the same number of plots (from script plsr_uncertainties.R)
+plots_field_spectral_ok_final <-readRDS( '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plots_field_spectral_ok.rds')
+data_ncpipn_taxon_sf_PDL_tree_count <- data_ncpipn_taxon_sf_PDL_tree_count[data_ncpipn_taxon_sf_PDL_tree_count$locality %in% plots_field_spectral_ok_final$locality,]
+# nb of individuals and species in total and of plots 
+dim(data_ncpipn_taxon_sf_PDL_tree_count)
+length(unique(data_ncpipn_taxon_sf_PDL_tree_count$locality))
+length(unique(data_ncpipn_taxon_sf_PDL_tree_count$nom_taxon))
+# number of genus and families
+length(unique(data_ncpipn_taxon_sf_PDL_tree_count$genus))
+length(unique(data_ncpipn_taxon_sf_PDL_tree_count$family))
+
+# nb of individual and species in plots
+sort(table(data_ncpipn_taxon_sf_PDL_tree_count$locality))
+mean(sort(table(data_ncpipn_taxon_sf_PDL_tree_count$locality)))
+data_ncpipn_taxon_sf_PDL_tree_count_species <- unique(data_ncpipn_taxon_sf_PDL_tree_count[c("locality", "plot", "date_det", "nom_taxon")])
+sort(table(data_ncpipn_taxon_sf_PDL_tree_count_species$locality))
+mean(sort(table(data_ncpipn_taxon_sf_PDL_tree_count_species$locality)))
+# type of plot
+data_ncpipn_taxon_sf_PDL_tree_count_plot <- unique(data_ncpipn_taxon_sf_PDL_tree_count[c("locality", "plot", "date_det")])
+table(data_ncpipn_taxon_sf_PDL_tree_count_plot$plot)
+table(data_ncpipn_taxon_sf_PDL_tree_count_plot$date_det)
+
+
+
+
 ###########################################################################
 ###                                                                     ###
 ####            create geometry for plot area                          ####
@@ -261,12 +301,13 @@ dim(tax_not_in_db)
 names(FT_all_compil_ok)
 FT_all_compil_ok_traits <- FT_all_compil_ok[,c("family","genus","taxonref","taxaname",
                                                "wood_density_avg","leaf_sla_avg", "leaf_area_avg", "leaf_ldmc_avg")]
+
 #### complete with traits at the genus level (if available) ####
 colnames(FT_all_compil_ok_traits)
 col_traits <- c("wood_density_avg", "leaf_sla_avg", "leaf_area_avg", "leaf_ldmc_avg")
 
+FT_all_compil_ok_traits <- FT_all_compil_ok_traits[!is.na(FT_all_compil_ok_traits$genus),]
 FT_all_traits_complet_genus <- FT_all_compil_ok_traits
-FT_all_traits_complet_genus <- FT_all_traits_complet_genus[!is.na(FT_all_traits_complet_genus$genus),]
 
 for(i in 1:length(col_traits)){
   trait_tmp <- col_traits[i]
@@ -279,12 +320,21 @@ for(i in 1:length(col_traits)){
 }
 
 ####  get same number of species for trait and site-species matrices #### 
+FT_select_sp <- FT_all_compil_ok_traits[,c("wood_density_avg", "leaf_sla_avg", "leaf_area_avg", "leaf_ldmc_avg")]
 FT_select <- FT_all_traits_complet_genus[,c("wood_density_avg", "leaf_sla_avg", "leaf_area_avg", "leaf_ldmc_avg")]
-rownames(FT_select) <- FT_all_traits_complet_genus$taxaname
-colnames(FT_select) <- c("WD", "SLA", "LA", "LDMC" )
+
+rownames(FT_select) <- rownames(FT_select_sp) <-  FT_all_traits_complet_genus$taxaname
+colnames(FT_select) <- colnames(FT_select_sp) <-  c("WD", "SLA", "LA", "LDMC" )
+
+FT_select_sp <- FT_select_sp[complete.cases(FT_select_sp),]
 FT_select <- FT_select[complete.cases(FT_select),]
+
+community_matrix_for_traits_sp <- community_matrix[,colnames(community_matrix) %in% rownames(FT_select_sp)]
+FT_select_sp <- FT_select_sp[rownames(FT_select_sp) %in% colnames(community_matrix_for_traits_sp), ]
+
 community_matrix_for_traits <- community_matrix[,colnames(community_matrix) %in% rownames(FT_select)]
 FT_select <- FT_select[rownames(FT_select) %in% colnames(community_matrix_for_traits), ]
+
 dim(FT_select)
 # verif order plots
 cbind(rownames(community_matrix_for_traits),data_ncpipn_plots_sf_PDL_utm$locality)
@@ -293,7 +343,15 @@ cbind(rownames(community_matrix_for_traits),data_ncpipn_plots_sf_PDL_utm$localit
 FT_select_SLA <- data.frame(SLA = FT_select[ , "SLA"])
 rownames(FT_select_SLA) <- rownames(FT_select)
 
-#### percentage complete trait data for plots at the genus level ####
+#### percentage complete trait data for plots at the species level ####
+# in plots
+hist(rowSums(community_matrix_for_traits_sp) / rowSums(community_matrix))
+# total
+sum(community_matrix_for_traits_sp)/sum(community_matrix)
+# species 
+ncol(community_matrix_for_traits_sp)/ncol(community_matrix)
+
+#### percentage complete trait data for plots with trait completed at genus level ####
 # in plots
 hist(rowSums(community_matrix_for_traits) / rowSums(community_matrix))
 # total
@@ -301,12 +359,16 @@ sum(community_matrix_for_traits)/sum(community_matrix)
 # species 
 ncol(community_matrix_for_traits)/ncol(community_matrix)
 
+
 #### transform traits values ####
 FT_select_trans <- FT_select
 FT_select_trans$SLA <- log(FT_select$SLA)
 FT_select_trans$LA <- log(FT_select$LA)
 FT_select_SLA_trans <- FT_select_SLA
 FT_select_SLA_trans$SLA <- log(FT_select_SLA$SLA)
+# save 
+# saveRDS(FT_select_trans, '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/FT_select_trans.rds')
+# saveRDS(community_matrix_for_traits, '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/community_matrix_for_traits.rds')
 
 #### synthetic traits from PCA on traits ####
 library(ade4)
@@ -756,7 +818,7 @@ plots_PDL_div_indices <- cbind(data.frame(geom_plots),
                                
 )
 # export
-saveRDS(plots_PDL_div_indices,'/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plots_PDL_div_indices.rds')
+# saveRDS(plots_PDL_div_indices,'/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plots_PDL_div_indices.rds')
 
 ###########################################################################
 ###                                                                     ###
@@ -787,7 +849,7 @@ plot_data_matrices <- list(locality = geom_plots$locality,
                            community_matrix_for_traits = community_matrix_for_traits,
                            community_matrix_for_traits_BA = community_matrix_for_traits_BA)
 dir.create('/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices')
-saveRDS(plot_data_matrices, '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plot_data_matrices.rds')
+# saveRDS(plot_data_matrices, '/home/thesardfou/Documents/projets/Reliques/signature_spectrale_fragmentation/NEW/maps/58FA_2021/plot_data_matrices/plot_data_matrices.rds')
 
 
 
